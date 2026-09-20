@@ -1,0 +1,43 @@
+<article id="message-<%= message.id %>" class="message-card <%= message.role %>">
+  <div class="message-meta">
+    <span><%= message.role.titleize %></span>
+    <time datetime="<%= message.created_at.iso8601 %>"><%= message.created_at&.strftime("%b %d, %H:%M") %></time>
+  </div>
+
+  <div class="message-body">
+    <%= simple_format(h(message.content)) %>
+  </div>
+
+  <% if message.assistant? && message.metadata.present? %>
+    <div class="message-provenance">
+      <% if message.metadata["tools"].present? %>
+        <div>
+          <strong>Current information</strong>
+          <ul>
+            <% message.metadata["tools"].each do |tool| %>
+              <li>
+                <%= tool["name"].to_s.titleize %> MCP
+                <% if tool["status"] == "success" %>
+                  - used successfully
+                <% else %>
+                  - unavailable: <%= tool["error"] %>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <% if message.metadata["sources"].present? %>
+        <div>
+          <strong>Knowledge sources</strong>
+          <ul>
+            <% message.metadata["sources"].each do |source| %>
+              <li><a href="<%= source["url"] %>" target="_blank" rel="noopener"><%= source["title"] %></a></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</article>

@@ -1,15 +1,253 @@
-/*
- * This is a manifest file that'll be compiled into application.css, which will include all the files
- * listed below.
- *
- * Any CSS (and SCSS, if configured) file within this directory, lib/assets/stylesheets, or any plugin's
- * vendor/assets/stylesheets directory can be referenced here using a relative path.
- *
- * You're free to add application-wide styles to this file and they'll appear at the bottom of the
- * compiled file so the styles you add here take precedence over styles defined in any other CSS
- * files in this directory. Styles in this file should be added after the last require_* statement.
- * It is generally better to create a new file per style scope.
- *
- *= require_tree .
- *= require_self
- */
+:root {
+	color-scheme: light;
+	--bg: #0f172a;
+	--bg-soft: #111c34;
+	--panel: rgba(255, 255, 255, 0.94);
+	--panel-strong: #ffffff;
+	--text: #10233f;
+	--muted: #5a6a84;
+	--accent: #df6f3d;
+	--accent-strong: #c34e21;
+	--border: rgba(16, 35, 63, 0.12);
+	--shadow: 0 20px 60px rgba(16, 35, 63, 0.18);
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body.app-body {
+	margin: 0;
+	min-height: 100vh;
+	font-family: Georgia, "Times New Roman", Times, serif;
+	color: var(--text);
+	background:
+		radial-gradient(circle at top left, rgba(223, 111, 61, 0.22), transparent 35%),
+		radial-gradient(circle at top right, rgba(56, 189, 248, 0.16), transparent 30%),
+		linear-gradient(160deg, #f7f4ef 0%, #eef3f8 100%);
+}
+
+a {
+	color: var(--accent-strong);
+}
+
+.page-shell {
+	max-width: 1400px;
+	margin: 0 auto;
+	padding: 32px;
+}
+
+.hero {
+	display: flex;
+	gap: 24px;
+	justify-content: space-between;
+	align-items: flex-start;
+	margin-bottom: 28px;
+	padding: 28px;
+	border-radius: 28px;
+	background: linear-gradient(135deg, rgba(16, 35, 63, 0.96), rgba(29, 78, 137, 0.92));
+	color: #fff;
+	box-shadow: var(--shadow);
+}
+
+.hero h1,
+.hero p {
+	margin: 0;
+}
+
+.hero h1 {
+	font-size: clamp(2rem, 4vw, 3.5rem);
+	letter-spacing: -0.04em;
+}
+
+.hero-copy {
+	max-width: 760px;
+	margin-top: 12px !important;
+	color: rgba(255, 255, 255, 0.82);
+}
+
+.eyebrow {
+	text-transform: uppercase;
+	letter-spacing: 0.2em;
+	font-size: 0.75rem;
+	margin-bottom: 8px !important;
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
+	gap: 24px;
+}
+
+.chat-panel,
+.panel {
+	background: var(--panel);
+	backdrop-filter: blur(16px);
+	border: 1px solid var(--border);
+	border-radius: 24px;
+	box-shadow: var(--shadow);
+}
+
+.chat-panel {
+	padding: 24px;
+}
+
+.messages {
+	display: grid;
+	gap: 16px;
+}
+
+.message-card {
+	padding: 18px 20px;
+	border-radius: 18px;
+	background: var(--panel-strong);
+	border: 1px solid var(--border);
+}
+
+.message-card.user {
+	margin-left: 10%;
+	background: #fef3ea;
+}
+
+.message-card.assistant {
+	margin-right: 4%;
+	background: #f8fbff;
+}
+
+.message-meta {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	color: var(--muted);
+	font-size: 0.85rem;
+	margin-bottom: 10px;
+}
+
+.message-body p:first-child {
+	margin-top: 0;
+}
+
+.message-provenance {
+	display: grid;
+	gap: 12px;
+	margin-top: 14px;
+	padding-top: 14px;
+	border-top: 1px solid var(--border);
+	color: var(--muted);
+}
+
+.message-provenance ul,
+.prompt-list {
+	margin: 8px 0 0;
+	padding-left: 18px;
+}
+
+.composer {
+	margin-top: 22px;
+	padding-top: 18px;
+	border-top: 1px solid var(--border);
+}
+
+.composer-form textarea {
+	width: 100%;
+	resize: vertical;
+	border-radius: 18px;
+	border: 1px solid var(--border);
+	padding: 16px 18px;
+	font: inherit;
+	min-height: 120px;
+}
+
+.composer-actions {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 16px;
+	margin-top: 14px;
+}
+
+.hint {
+	color: var(--muted);
+	font-size: 0.92rem;
+}
+
+.primary-button,
+.secondary-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	border-radius: 999px;
+	padding: 12px 18px;
+	font: inherit;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.primary-button {
+	background: linear-gradient(135deg, var(--accent), #f39b5b);
+	color: #fff;
+	font-weight: 700;
+}
+
+.secondary-button {
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+	border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.sidebar {
+	display: grid;
+	gap: 24px;
+}
+
+.panel {
+	padding: 22px;
+}
+
+.panel h2,
+.empty-state h2 {
+	margin-top: 0;
+}
+
+.panel dl {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 10px 16px;
+}
+
+.panel dt {
+	color: var(--muted);
+}
+
+.panel dd {
+	margin: 0;
+	font-weight: 600;
+}
+
+.empty-state {
+	margin-bottom: 24px;
+	padding: 22px;
+	border-radius: 20px;
+	background: linear-gradient(135deg, rgba(223, 111, 61, 0.12), rgba(16, 35, 63, 0.05));
+	border: 1px solid var(--border);
+}
+
+@media (max-width: 980px) {
+	.layout {
+		grid-template-columns: 1fr;
+	}
+
+	.message-card.user,
+	.message-card.assistant {
+		margin-left: 0;
+		margin-right: 0;
+	}
+
+	.hero,
+	.composer-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+}

@@ -1,0 +1,15 @@
+<% content_for :title, "AI Travel Planning Assistant" %>
+
+<div class="page-shell">
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Singapore travel planner</p>
+      <h1>AI Travel Planning Assistant</h1>
+      <p class="hero-copy">Ask for Singapore destinations, itineraries, weather-aware adjustments, or budget conversions. The assistant combines a curated knowledge base with current tool data when needed.</p>
+    </div>
+
+    <%= link_to "New conversation", root_path, class: "secondary-button" %>
+  </header>
+
+  <%= render partial: "conversations/conversation_content", locals: { conversation: @conversation, messages: @messages } %>
+</div>

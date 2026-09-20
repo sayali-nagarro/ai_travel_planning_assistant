@@ -1,0 +1,49 @@
+<main id="conversation-content" class="layout" data-controller="chat-scroll">
+  <section class="chat-panel">
+    <% if messages.empty? %>
+      <div class="empty-state">
+        <h2>Start a trip planning conversation</h2>
+        <p>Try: <strong>Create a three-day Singapore itinerary for next week and adjust it according to the weather forecast.</strong></p>
+      </div>
+    <% end %>
+
+    <div class="messages" id="messages">
+      <%= render partial: "messages/message", collection: messages, as: :message %>
+    </div>
+
+    <div class="composer">
+      <%= form_with url: conversation_messages_path, scope: :message, class: "composer-form", authenticity_token: false do |form| %>
+        <%= hidden_field_tag :conversation_id, conversation.id %>
+        <%= form.text_area :content, rows: 4, placeholder: "Ask about Singapore, weather, budgets, or itinerary changes...", required: true %>
+        <div class="composer-actions">
+          <span class="hint">Uses RAG for destination facts and MCP for current weather or currency data.</span>
+          <%= form.submit "Send", class: "primary-button" %>
+        </div>
+      <% end %>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <section class="panel">
+      <h2>Conversation context</h2>
+      <dl>
+        <dt>Destination</dt>
+        <dd><%= conversation.preferences["destination"] || "Singapore" %></dd>
+        <dt>Travel party</dt>
+        <dd><%= conversation.preferences["travel_party"] || "Not set yet" %></dd>
+        <dt>Budget</dt>
+        <dd><%= [conversation.preferences["budget_currency"], conversation.preferences["budget"]].compact.join(" ").presence || "Not set yet" %></dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Suggested prompts</h2>
+      <ul class="prompt-list">
+        <li>What are the must-visit attractions in Singapore?</li>
+        <li>Plan three days for my family in Singapore.</li>
+        <li>What is the weather forecast for next week?</li>
+        <li>Convert INR 60,000 to SGD.</li>
+      </ul>
+    </section>
+  </aside>
+</main>
