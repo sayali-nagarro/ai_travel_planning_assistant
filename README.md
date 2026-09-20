@@ -408,3 +408,6 @@ Travel::Assistant.call(
 - The app uses a portable Ruby cosine-similarity implementation instead of PostgreSQL `pgvector` so it runs reliably in this environment without extra database extension setup.
 - The LLM adapter is configurable and defaults to a local deterministic responder when no API key is provided.
 - Weather and currency clients are adapter-based and can be pointed at MCP-compatible endpoints through environment variables.
+
+<img width="1017" height="905" alt="image" src="https://github.com/user-attachments/assets/15f622b8-9b22-45f4-9b0f-93bd69c4f3ed" />
+
