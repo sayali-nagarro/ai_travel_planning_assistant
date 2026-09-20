@@ -18,7 +18,7 @@ module Travel
     private
 
     def knowledge_query?(message, context, needs_weather:, needs_currency:)
-      travel_keywords = message.match?(/singapore|itinerary|attraction|neighbourhood|neighborhood|transport|culture|food|family|trip|day|visit|plan|travel/i)
+      travel_keywords = message.match?(/singapore|itinerary|attraction|neighbourhood|neighborhood|transport|culture|food|family|trip|day|visit|plan|travel|activity|activities|indoor|outdoor/i)
       follow_up_reference = context[:previous_itinerary].present? && message.match?(/day\s*(one|two|three|1|2|3)|what if|adjust|change|rain/i)
 
       return true if travel_keywords || follow_up_reference
@@ -28,7 +28,7 @@ module Travel
     end
 
     def weather_query?(message, context)
-      message.match?(/weather|forecast|rain|rainy|umbrella|outdoor|next week|this weekend/i)
+      message.match?(/weather|forecast|rain|rainy|umbrella|storm|precipitation/i)
     end
 
     def currency_query?(message)

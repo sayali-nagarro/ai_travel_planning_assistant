@@ -18,6 +18,14 @@ RSpec.describe Travel::ToolRouter do
     expect(decision.needs_knowledge).to be(false)
   end
 
+  it "keeps indoor or outdoor activity questions on the knowledge path" do
+    decision = router.call(user_message: "Should I plan indoor or outdoor activities tomorrow?", context: { destination: "Singapore" })
+
+    expect(decision.needs_knowledge).to be(true)
+    expect(decision.needs_weather).to be(false)
+    expect(decision.needs_currency).to be(false)
+  end
+
   it "selects currency for conversion questions" do
     decision = router.call(user_message: "Convert INR 50,000 to SGD.", context: { destination: "Singapore" })
 
