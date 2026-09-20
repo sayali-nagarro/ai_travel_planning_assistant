@@ -133,6 +133,55 @@ For combined requests, the response is instructed to separate:
 
 This keeps the answer auditable and prevents current information from being presented as stable destination knowledge.
 
+## Technology Requirements
+
+The app is built around the requested AI workflow capabilities, with a Rails-native orchestration layer in place of a separate LangChain dependency:
+
+- Application orchestration: `Travel::Assistant`, `Travel::ToolRouter`, `Travel::ConversationContext`, and `Travel::PromptBuilder`
+- Embeddings: the deterministic Ruby embedder in `Knowledge::Embedder`
+- Vector store: PostgreSQL-backed semantic retrieval over stored embeddings, with `pgvector` available in the stack for vector-oriented storage and search
+- LLM: the configurable `Ai::LlmClient` interface, with a local fallback client for development and testing
+- MCP tools: `Mcp::WeatherClient` and `Mcp::CurrencyClient`
+- User interface: a simple Rails chat UI built with Turbo and Stimulus
+
+This keeps the project focused on AI workflow quality, grounding, and tool integration rather than UI complexity.
+
+## Rails Console Sample
+
+The assistant is used by the Rails chat UI, and developers can also exercise the same orchestration path directly from `rails c`.
+
+```ruby
+conversation = Conversation.create!
+
+result = Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "Create a three-day Singapore itinerary for next week and adjust it according to the weather forecast."
+)
+
+puts result.answer
+puts result.sources
+puts result.tools
+```
+
+For a combined budget scenario, you can run:
+
+```ruby
+conversation = Conversation.create!
+
+result = Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "I have a budget of INR 60,000. Convert it to SGD and suggest a three-day itinerary."
+)
+
+puts result.answer
+```
+
+If you want to inspect the persisted message and provenance, use:
+
+```ruby
+conversation.messages.last.metadata
+```
+
 ## Conversation Memory
 
 The app stores both messages and structured preferences:
@@ -269,6 +318,87 @@ That makes the workflow auditable and easy to test.
 | Source/provenance information | message metadata + UI source list | `spec/services/travel/assistant_spec.rb` | Done |
 | Graceful failure handling | assistant rescue path + tool clients | `spec/services/travel/assistant_spec.rb` | Done |
 | Prompt engineering | `Travel::PromptBuilder` | covered by assistant workflow spec | Done |
+
+## Minimum Acceptance Criteria
+
+- [x] Knowledge base created from at least three travel resources
+- [x] Embedding-based semantic retrieval
+- [x] Grounded answers with source references
+- [x] Weather information through an MCP tool
+- [x] Currency conversion through an MCP tool
+- [x] At least one response combining RAG and MCP
+- [x] Multi-turn conversation with retained context
+- [x] Appropriate tool selection based on user intent
+- [x] Clear handling of missing knowledge and tool failures
+- [x] A simple, usable interface
+
+## Deliverables
+
+1. Source code in a Git repository
+  - This project is tracked as a standard Rails application with service objects, specs, and documentation.
+2. A working application
+  - The app runs as a Rails web application and serves a conversational travel assistant UI.
+3. Knowledge-base documents, or clear instructions for obtaining them
+  - The Singapore knowledge base sources are listed in the README, and `bin/rails knowledge:import` / `bin/rails db:seed` load them.
+4. A README covering architecture, knowledge-base sources, RAG workflow, MCP tools, prompt and context strategy, and setup instructions
+  - The sections above document all of these areas.
+5. Sample questions and application responses
+  - The README includes sample questions for RAG, weather, currency, combined scenarios, and multi-turn context.
+6. A short demonstration showing RAG, MCP, a combined response, and conversational context
+  - Use the console examples below or the sample questions in the README to exercise each scenario.
+
+## Sample Questions and Example Response Shapes
+
+These are representative prompts and the type of response the assistant is designed to return:
+
+| Prompt | Expected response shape |
+|---|---|
+| `What are the must-visit attractions in Singapore?` | Grounded destination summary with source titles and URLs |
+| `What is the weather forecast for Singapore next week?` | MCP weather summary |
+| `Convert INR 50,000 to SGD.` | MCP currency conversion result |
+| `Create a three-day Singapore itinerary for next week and adjust it according to the weather forecast.` | Combined RAG + weather itinerary with indoor backup guidance |
+| `I'm travelling with my wife and 8-year-old son.` followed by `Plan three days for us in Singapore.` | Multi-turn response that preserves family context |
+
+## Short Demonstration
+
+Run these in `rails c` to see the main workflows end to end:
+
+```ruby
+conversation = Conversation.create!
+Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "What are the must-visit attractions in Singapore?"
+)
+```
+
+```ruby
+conversation = Conversation.create!
+Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "What is the weather forecast for Singapore next week?"
+)
+```
+
+```ruby
+conversation = Conversation.create!
+Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "Create a three-day Singapore itinerary for next week and adjust it according to the weather forecast."
+)
+```
+
+```ruby
+conversation = Conversation.create!
+Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "I'm travelling with my wife and 8-year-old son."
+)
+
+Travel::Assistant.call(
+  conversation: conversation,
+  user_message: "Plan three days for us in Singapore."
+)
+```
 | Tests | RSpec suite | `bundle exec rspec` | Done |
 | README/documentation | this file | n/a | Done |
 | Simple usable UI | chat view and layout | manual UI smoke | Done |
