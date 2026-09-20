@@ -65,4 +65,15 @@ RSpec.describe Travel::ConversationContext do
     expect(result[:budget_currency]).to eq("AUD")
     expect(result[:target_currency]).to eq("INR")
   end
+
+  it "understands common currency names for conversion requests" do
+    result = context.build(
+      conversation: conversation,
+      user_message: "110 Indian Rupees to Australian currency"
+    )
+
+    expect(result[:budget]).to eq(110.0)
+    expect(result[:budget_currency]).to eq("INR")
+    expect(result[:target_currency]).to eq("AUD")
+  end
 end

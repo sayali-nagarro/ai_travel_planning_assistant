@@ -2,6 +2,13 @@ module Ai
   class LocalClient
     def generate(messages:, system_prompt:, context:, retrieved_documents:, tool_results:)
       request = messages.last.respond_to?(:content) ? messages.last.content.to_s : messages.last.to_s
+      weather = tool_results.find { |tool| tool[:name] == "weather" }
+
+      currency = tool_results.find { |tool| tool[:name] == "currency" }
+      if binary_weather_question?(request)
+        return weather_binary_response(weather:)
+      end
+
       response_sections = []
 
       if context[:trip_duration_days].present?
@@ -19,14 +26,12 @@ module Ai
         response_sections << "I could not retrieve enough destination knowledge to ground a detailed recommendation."
       end
 
-      weather = tool_results.find { |tool| tool[:name] == "weather" }
       if weather && weather[:status] == :success
         response_sections << "Current information from Weather MCP: #{summarize_weather(weather[:data])}"
       elsif weather
         response_sections << "Weather MCP was unavailable: #{weather[:error]}"
       end
 
-      currency = tool_results.find { |tool| tool[:name] == "currency" }
       if currency && currency[:status] == :success
         response_sections << "Current information from Currency MCP: #{summarize_currency(currency[:data])}"
       elsif currency
@@ -120,6 +125,24 @@ module Ai
     def summarize_currency(data)
       formatted = format("%.2f", data[:converted_amount].to_f)
       "#{data[:amount]} #{data[:from]} = #{formatted} #{data[:to]} at rate #{format('%.4f', data[:rate].to_f)}"
+    end
+
+    def binary_weather_question?(request)
+      request.match?(/should i plan .*\b(indoor|outdoor)\b.*\btomorrow\b/i) ||
+        request.match?(/\b(is|will)\b.*\brain\b.*\b(expected|forecast|likely)\b/i) ||
+        request.match?(/\bindoors?\b.*\bor\b.*\boutdoors?\b/i)
+    end
+
+    def weather_binary_response(weather:)
+      forecast = weather&.dig(:data, :forecast) || []
+      tomorrow = forecast[1] || forecast.first || {}
+      rainy = tomorrow[:precipitation_probability].to_i >= 50 || %w[rain storm].include?(tomorrow[:condition].to_s)
+
+      if rainy
+        "Yes. Plan indoor activities tomorrow because the forecast shows #{tomorrow[:condition] || 'rain'} with a #{tomorrow[:precipitation_probability] || 0}% chance of precipitation."
+      else
+        "No. Outdoor activities are reasonable tomorrow because the forecast looks mostly clear."
+      end
     end
   end
 end

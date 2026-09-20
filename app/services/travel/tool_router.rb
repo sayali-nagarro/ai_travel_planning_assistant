@@ -33,7 +33,8 @@ module Travel
 
     def currency_query?(message)
       message.match?(/\bconvert\b|\bexchange\b|budget|equivalent|worth|rate/i) ||
-        message.match?(/\b(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
+        message.match?(/\b(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i) ||
+        message.match?(/\bindian rupees?\b|\baustralian currency\b|\baustralian dollars?\b|\bsingapore dollars?\b|\bamerican dollars?\b|\bus currency\b|\beuropean currency\b|\bbritish pounds?\b|\bjapanese yens?\b/i)
     end
 
     def explain(needs_knowledge:, needs_weather:, needs_currency:)

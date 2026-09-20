@@ -49,5 +49,32 @@ RSpec.describe Ai::LocalClient do
       expect(result).to include("Trip overview: a 12-day Singapore plan for family.")
       expect(result.scan(/^Day \d+/).size).to eq(12)
     end
+
+    it "returns a binary answer for weather-only indoor or outdoor questions" do
+      client = described_class.new
+      message = Struct.new(:content).new("Should I plan indoor or outdoor activities tomorrow?")
+
+      result = client.generate(
+        messages: [ message ],
+        system_prompt: "",
+        context: {},
+        retrieved_documents: [],
+        tool_results: [
+          {
+            name: "weather",
+            status: :success,
+            data: {
+              forecast: [
+                { date: "2026-09-20", condition: "rain", precipitation_probability: 30 },
+                { date: "2026-09-21", condition: "storm", precipitation_probability: 90 }
+              ]
+            }
+          }
+        ]
+      )
+
+      expect(result).to start_with("Yes.")
+      expect(result).not_to include("Day 1")
+    end
   end
 end

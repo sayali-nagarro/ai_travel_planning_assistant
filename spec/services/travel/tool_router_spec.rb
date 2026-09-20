@@ -25,6 +25,13 @@ RSpec.describe Travel::ToolRouter do
     expect(decision.needs_knowledge).to be(false)
   end
 
+  it "selects currency for name-based conversion questions" do
+    decision = router.call(user_message: "110 Indian Rupees to Australian currency", context: { destination: "Singapore" })
+
+    expect(decision.needs_currency).to be(true)
+    expect(decision.needs_knowledge).to be(false)
+  end
+
   it "selects combined tools for weather-aware itineraries" do
     decision = router.call(user_message: "Plan three days and adjust it for rain.", context: { destination: "Singapore" })
 

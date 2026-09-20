@@ -72,23 +72,51 @@ module Travel
     end
 
     def budget_amount(text)
-      currency_first = text.match(/(?:INR|SGD|USD|EUR|GBP|AUD|JPY)\s?([\d,]+(?:\.\d+)?)/i)
+      currency_pattern = currency_name_pattern
+
+      currency_first = text.match(/#{currency_pattern}\s?([\d,]+(?:\.\d+)?)/i)
       return currency_first[1].delete(",").to_f if currency_first
 
-      amount_first = text.match(/([\d,]+(?:\.\d+)?)\s?(?:INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
+      amount_first = text.match(/([\d,]+(?:\.\d+)?)\s?#{currency_pattern}\b/i)
       return amount_first[1].delete(",").to_f if amount_first
 
       nil
     end
 
     def budget_currency(text)
-      match = text.match(/\b(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
-      match&.[](1)&.upcase
+      first_currency_code(text)
     end
 
     def target_currency(text)
-      match = text.match(/(?:\bto\b|\binto\b|\bin\b)\s+(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
-      match&.[](1)&.upcase
+      match = text.match(/(?:\bto\b|\binto\b|\bin\b)\s+(#{currency_name_pattern})\b/i)
+      currency_code(match&.[](1))
+    end
+
+    def first_currency_code(text)
+      match = text.scan(currency_token_pattern).flatten.first
+      currency_code(match)
+    end
+
+    def currency_code(text)
+      normalized = text.to_s.downcase
+
+      return "INR" if normalized.match?(/\binr\b|\bindian rupees?\b|\bindian currency\b/)
+      return "AUD" if normalized.match?(/\baud\b|\baustralian dollars?\b|\baustralian currency\b|\baustralia[n]? currency\b/)
+      return "SGD" if normalized.match?(/\bsgd\b|\bsingapore dollars?\b|\bsingapore currency\b/)
+      return "USD" if normalized.match?(/\busd\b|\bus dollars?\b|\bamerican dollars?\b|\bus currency\b/)
+      return "EUR" if normalized.match?(/\beur\b|\beuros?\b|\beuropean currency\b/)
+      return "GBP" if normalized.match?(/\bgbp\b|\bbritish pounds?\b|\bpounds? sterling\b/)
+      return "JPY" if normalized.match?(/\bjpy\b|\b(japanese )?yens?\b/)
+
+      normalized.upcase if normalized.match?(/\b(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
+    end
+
+    def currency_name_pattern
+      "(?:INR|SGD|USD|EUR|GBP|AUD|JPY|Indian Rupees?|Indian Currency|Australian Dollars?|Australian Currency|Singapore Dollars?|Singapore Currency|US Dollars?|American Dollars?|US Currency|Euros?|European Currency|British Pounds?|Pounds Sterling|Japanese Yens?)"
+    end
+
+    def currency_token_pattern
+      /\b(?:INR|SGD|USD|EUR|GBP|AUD|JPY|Indian Rupees?|Indian Currency|Australian Dollars?|Australian Currency|Singapore Dollars?|Singapore Currency|US Dollars?|American Dollars?|US Currency|Euros?|European Currency|British Pounds?|Pounds Sterling|Japanese Yens?)\b/i
     end
 
     def trip_duration_days(text)
