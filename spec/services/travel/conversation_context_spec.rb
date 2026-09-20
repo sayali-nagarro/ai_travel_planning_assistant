@@ -54,4 +54,15 @@ RSpec.describe Travel::ConversationContext do
     expect(result[:budget_currency]).to eq("AUD")
     expect(result[:target_currency]).to eq("INR")
   end
+
+  it "extracts budget amounts written before the currency code" do
+    result = context.build(
+      conversation: conversation,
+      user_message: "How much is 2 AUD in INR?"
+    )
+
+    expect(result[:budget]).to eq(2.0)
+    expect(result[:budget_currency]).to eq("AUD")
+    expect(result[:target_currency]).to eq("INR")
+  end
 end

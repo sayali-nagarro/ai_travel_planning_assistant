@@ -72,10 +72,13 @@ module Travel
     end
 
     def budget_amount(text)
-      match = text.match(/(?:INR|SGD|USD|EUR|GBP|AUD|JPY)\s?([\d,]+(?:\.\d+)?)/i)
-      return unless match
+      currency_first = text.match(/(?:INR|SGD|USD|EUR|GBP|AUD|JPY)\s?([\d,]+(?:\.\d+)?)/i)
+      return currency_first[1].delete(",").to_f if currency_first
 
-      match[1].delete(",").to_f
+      amount_first = text.match(/([\d,]+(?:\.\d+)?)\s?(?:INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
+      return amount_first[1].delete(",").to_f if amount_first
+
+      nil
     end
 
     def budget_currency(text)
