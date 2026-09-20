@@ -100,4 +100,55 @@ RSpec.describe Travel::Assistant do
     expect(result.tools.first[:name]).to eq("currency")
     expect(result.tools.first[:data][:to]).to eq("INR")
   end
+
+  it "reimports knowledge when the destination knowledge base is empty" do
+    conversation = Conversation.create!
+    retriever = instance_double(Knowledge::Retriever)
+    llm_client = instance_double(Ai::LocalClient)
+
+    expect(retriever).to receive(:call).and_return([]).ordered
+    expect(retriever).to receive(:call).and_return([
+      hit = Struct.new(:chunk, :source, :score, keyword_init: true).new(
+        chunk: KnowledgeChunk.new(
+          knowledge_source: KnowledgeSource.new(
+            title: "Visit Singapore - Things to Do",
+            url: "https://www.visitsingapore.com/en/see-do/",
+            destination: "Singapore",
+            source_type: "tourism_board",
+            metadata: { extracted_topics: [ "attractions" ] }
+          ),
+          chunk_index: 0,
+          content: "Marina Bay, Gardens by the Bay, Singapore Flyer",
+          embedding: Array.new(32, 0.1),
+          metadata: {}
+        ),
+        source: KnowledgeSource.new(
+          title: "Visit Singapore - Things to Do",
+          url: "https://www.visitsingapore.com/en/see-do/",
+          destination: "Singapore",
+          source_type: "tourism_board",
+          metadata: { extracted_topics: [ "attractions" ] }
+        ),
+        score: 0.9
+      )
+    ]).ordered
+
+    expect(Knowledge::Importer).to receive(:new).and_call_original
+    allow(llm_client).to receive(:generate).and_return("Marina Bay is a must-visit attraction.")
+
+    result = described_class.new(
+      conversation:,
+      user_message: "What are the must-visit attractions in Singapore?",
+      llm_client:,
+      retriever:,
+      weather_client: instance_double(Mcp::WeatherClient, forecast: { status: :error, error: "not used" }),
+      currency_client: instance_double(Mcp::CurrencyClient, convert: { status: :error, error: "not used" }),
+      tool_router: Travel::ToolRouter.new,
+      context_builder: Travel::ConversationContext.new,
+      prompt_builder: Travel::PromptBuilder.new
+    ).call
+
+    expect(result.retrieved_documents).not_to be_empty
+    expect(result.answer).to include("Marina Bay")
+  end
 end

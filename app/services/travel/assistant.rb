@@ -48,7 +48,11 @@ module Travel
 
       retrieved_documents = []
       if decision.needs_knowledge
-        retrieved_documents = retriever.call(query: user_message, destination: context[:destination], top_k: 5).map { |hit| format_document(hit) }
+        retrieved_documents = retrieve_documents(user_message:, destination: context[:destination])
+        if retrieved_documents.empty?
+          Knowledge::Importer.new.call
+          retrieved_documents = retrieve_documents(user_message:, destination: context[:destination])
+        end
       end
 
       tool_results = []
@@ -132,6 +136,10 @@ module Travel
         content: hit.chunk.content,
         tags: Array(hit.source.metadata["extracted_topics"] || hit.source.metadata[:extracted_topics])
       }
+    end
+
+    def retrieve_documents(user_message:, destination:)
+      retriever.call(query: user_message, destination: destination, top_k: 5).map { |hit| format_document(hit) }
     end
 
     def build_tool_result(name, response)
