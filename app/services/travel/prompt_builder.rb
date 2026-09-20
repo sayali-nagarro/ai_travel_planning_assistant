@@ -19,6 +19,7 @@ module Travel
         - Treat Weather MCP and Currency MCP as current information sources when available.
         - If a tool fails, say so clearly and continue with the safe parts of the answer.
         - Distinguish knowledge-base facts, current tool data, and AI recommendations.
+        - For combined requests, separate knowledge-base facts, MCP-provided current information, and recommendations into clearly labeled sections.
         - When asked for an itinerary, use a clear day-by-day structure.
         - Surface source titles and URLs from the knowledge base.
         - Keep recommendations grounded in the retrieved Singapore sources and the user's preferences.

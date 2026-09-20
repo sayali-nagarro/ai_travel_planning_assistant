@@ -18,25 +18,27 @@ module Ai
       end
 
       if retrieved_documents.any?
-        response_sections << "Based on the Singapore knowledge base:"
+        response_sections << "Knowledge-base facts:"
         retrieved_documents.first(3).each do |document|
           response_sections << "- #{document[:title]}: #{document[:summary]}"
         end
       else
-        response_sections << "I could not retrieve enough destination knowledge to ground a detailed recommendation."
+        response_sections << "Knowledge-base facts: I could not retrieve enough destination knowledge to ground a detailed recommendation."
       end
 
       if weather && weather[:status] == :success
         response_sections << "Current information from Weather MCP: #{summarize_weather(weather[:data])}"
       elsif weather
-        response_sections << "Weather MCP was unavailable: #{weather[:error]}"
+        response_sections << "Current information from Weather MCP: unavailable (#{weather[:error]})"
       end
 
       if currency && currency[:status] == :success
         response_sections << "Current information from Currency MCP: #{summarize_currency(currency[:data])}"
       elsif currency
-        response_sections << "Currency MCP was unavailable: #{currency[:error]}"
+        response_sections << "Current information from Currency MCP: unavailable (#{currency[:error]})"
       end
+
+      response_sections << "LLM recommendations:"
 
       if request.match?(/itinerary|plan|day|trip/i)
         response_sections << itinerary_template(context:, retrieved_documents:, tool_results:)
@@ -51,6 +53,7 @@ module Ai
 
     def itinerary_template(context:, retrieved_documents:, tool_results:)
       weather = tool_results.find { |tool| tool[:name] == "weather" }
+      currency = tool_results.find { |tool| tool[:name] == "currency" }
       indoor_backups = retrieved_documents.select { |document| document[:tags].include?("indoor") || document[:tags].include?("family") }
       outdoor_options = retrieved_documents.select { |document| document[:tags].include?("outdoor") || document[:tags].include?("nature") }
       trip_days = context[:trip_duration_days].to_i
@@ -90,6 +93,11 @@ module Ai
       ]
 
       trip_days = [ trip_days, 1 ].max
+      budget_line = if context[:budget].present? && context[:budget_currency].present? && currency&.dig(:status) == :success && currency.dig(:data, :converted_amount).present?
+        "Budget context: #{context[:budget]} #{context[:budget_currency]} ~= #{format('%.2f', currency[:data][:converted_amount].to_f)} #{currency[:data][:to]}"
+      elsif context[:budget].present? && context[:budget_currency].present?
+        "Budget context: #{context[:budget]} #{context[:budget_currency]}"
+      end
 
       days = Array.new(trip_days) do |index|
         plan = day_plans[index % day_plans.length]
@@ -103,17 +111,25 @@ module Ai
         ]
       end.flatten
 
+      days.unshift(budget_line) if budget_line.present?
       days << "Why this works: the plan matches the trip length, groups sights by neighborhood, mixes indoor and outdoor options, and leaves room for weather adjustments across longer stays."
       days.join("\n")
     end
 
     def recommendation_template(context:, retrieved_documents:, tool_results:)
-      [
+      lines = [
         "Recommendation: combine the retrieved Singapore knowledge with your preferences for a balanced plan.",
         context[:travel_party].present? ? "Travel party: #{context[:travel_party]}" : nil,
-        context[:budget].present? ? "Budget context: #{context[:budget]} #{context[:budget_currency]}" : nil,
-        retrieved_documents.first(2).map { |document| "- #{document[:title]}: #{document[:summary]}" }
-      ].flatten.compact.join("\n")
+        context[:budget].present? ? "Budget context: #{context[:budget]} #{context[:budget_currency]}" : nil
+      ].compact
+
+      if retrieved_documents.any?
+        lines << "Knowledge-base facts used by the recommendation:"
+        lines.concat(retrieved_documents.first(2).map { |document| "- #{document[:title]}: #{document[:summary]}" })
+      end
+
+      lines << "Combined guidance: use the MCP current information above together with the destination facts to finalize the plan."
+      lines.join("\n")
     end
 
     def summarize_weather(data)

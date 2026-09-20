@@ -1,24 +1,280 @@
-# README
+# AI Travel Planning Assistant
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Production-oriented Ruby on Rails app for Singapore travel planning with RAG, semantic retrieval, current weather and currency tooling, multi-turn memory, and source-aware responses.
 
-Things you may want to cover:
+## Overview
 
-* Ruby version
+The app answers Singapore travel questions using three grounded inputs:
 
-* System dependencies
+- A curated Singapore knowledge base stored in PostgreSQL.
+- Current weather data via a weather tool adapter.
+- Current currency conversion via a currency tool adapter.
 
-* Configuration
+It keeps conversations stateful so follow-up questions such as "what if it rains on day two?" keep the same trip context.
 
-* Database creation
+## Architecture
 
-* Database initialization
+```mermaid
+flowchart LR
+  U[User] --> UI[Rails Chat UI]
+  UI --> C[ConversationsController]
+  C --> A[Travel::Assistant]
+  A --> R[Travel::ToolRouter]
+  A --> X[Travel::ConversationContext]
+  R --> K[Knowledge::Retriever]
+  R --> W[Mcp::WeatherClient]
+  R --> Y[Mcp::CurrencyClient]
+  K --> P[(PostgreSQL)]
+  A --> B[Travel::PromptBuilder]
+  B --> L[Ai::LlmClient]
+  L --> O[Structured answer + provenance]
+  O --> UI
+```
 
-* How to run the test suite
+### Design choices
 
-* Services (job queues, cache servers, search engines, etc.)
+- Rails 7.2 for the web layer and orchestration.
+- PostgreSQL for persistence.
+- Semantic retrieval implemented in Ruby over embeddings stored as float arrays, which keeps the app runnable without a separate vector service.
+- Service objects isolate orchestration, retrieval, prompting, and tool adapters.
+- The UI is intentionally simple and readable on desktop and mobile.
 
-* Deployment instructions
+## Project Structure
 
-* ...
+- [app/services/travel/assistant.rb](app/services/travel/assistant.rb)
+- [app/services/travel/tool_router.rb](app/services/travel/tool_router.rb)
+- [app/services/travel/conversation_context.rb](app/services/travel/conversation_context.rb)
+- [app/services/travel/prompt_builder.rb](app/services/travel/prompt_builder.rb)
+- [app/services/knowledge/importer.rb](app/services/knowledge/importer.rb)
+- [app/services/knowledge/retriever.rb](app/services/knowledge/retriever.rb)
+- [app/services/mcp/weather_client.rb](app/services/mcp/weather_client.rb)
+- [app/services/mcp/currency_client.rb](app/services/mcp/currency_client.rb)
+- [app/services/ai/open_ai_client.rb](app/services/ai/open_ai_client.rb)
+- [app/controllers/conversations_controller.rb](app/controllers/conversations_controller.rb)
+- [app/controllers/messages_controller.rb](app/controllers/messages_controller.rb)
+- [app/views/conversations/show.html.erb](app/views/conversations/show.html.erb)
+
+## Knowledge Base
+
+The knowledge base contains three Singapore public resources curated into chunks:
+
+1. Wikivoyage Singapore Travel Guide
+	- URL: https://en.wikivoyage.org/wiki/Singapore
+	- Extracted: neighborhoods, transport, food, culture, indoor/outdoor highlights.
+2. Visit Singapore - Things to Do
+	- URL: https://www.visitsingapore.com/en/see-do/
+	- Extracted: must-visit attractions, family-friendly ideas, indoor backups, outdoor planning.
+3. Visit Singapore - Travel Planning and Itineraries
+	- URL: https://www.visitsingapore.com/en/plan-your-trip/
+	- Extracted: three-day planning patterns, transport, budget and weather backups.
+
+### Ingestion process
+
+The importer flow is:
+
+1. `Knowledge::Catalog` defines the curated source list.
+2. `Knowledge::Chunker` turns each source into meaningful sections.
+3. `Knowledge::Embedder` creates a deterministic embedding vector for each chunk.
+4. `Knowledge::Importer` persists `KnowledgeSource` and `KnowledgeChunk` rows.
+5. `Knowledge::Retriever` ranks chunks by cosine similarity.
+
+### Chunking notes
+
+Chunks are section-sized, not arbitrary character slices. Each chunk retains metadata with:
+
+- source title
+- source URL
+- destination
+- section title
+
+## MCP Integrations
+
+The app includes two tool adapters:
+
+- `Mcp::WeatherClient`
+- `Mcp::CurrencyClient`
+
+They normalize external responses into app-level hashes with `status`, `data`, and `error` fields.
+
+### Weather
+
+Weather is used for current or forecast-based questions and for itinerary adjustments such as rain-friendly plans. If the MCP endpoint is unavailable, the client falls back to a public forecast source so the app remains usable during local development.
+
+### Currency
+
+Currency conversion is used for current INR-to-SGD, SGD-to-INR, or USD-to-SGD requests. The adapter normalizes the result into a current conversion payload.
+
+### Tool selection
+
+`Travel::ToolRouter` decides whether a request needs:
+
+- knowledge only
+- weather only
+- currency only
+- knowledge + weather
+- knowledge + currency
+- knowledge + weather + currency
+
+## Prompt Strategy
+
+`Travel::PromptBuilder` uses a layered prompt design:
+
+- system rules that require grounding and forbid unsupported facts
+- the current conversation context, including preserved user preferences
+- retrieved knowledge snippets for destination facts
+- tool results for current weather and currency data
+- recent conversation history for follow-up continuity
+
+For combined requests, the response is instructed to separate:
+
+- knowledge-base facts
+- current tool data
+- AI recommendations
+
+This keeps the answer auditable and prevents current information from being presented as stable destination knowledge.
+
+## Conversation Memory
+
+The app stores both messages and structured preferences:
+
+- destination
+- travel party
+- children ages
+- budget and currency
+- trip duration
+- travel window
+- previous itinerary summary
+
+This supports follow-up questions without repeating the full trip brief.
+
+## Setup
+
+```bash
+bundle install
+bin/rails db:create db:migrate
+bin/rails knowledge:import
+bin/rails server
+```
+
+## Environment Variables
+
+Create a local `.env` or export the following variables:
+
+- `LLM_API_KEY`
+- `LLM_MODEL`
+- `LLM_BASE_URL`
+- `WEATHER_MCP_URL`
+- `CURRENCY_MCP_URL`
+
+The app will use a local fallback client when no LLM key is configured.
+
+## Knowledge Ingestion
+
+Use either of these commands:
+
+```bash
+bin/rails knowledge:import
+```
+
+or:
+
+```bash
+bin/rails db:seed
+```
+
+Both load the Singapore knowledge base into PostgreSQL.
+
+## Testing
+
+```bash
+bundle exec rspec
+bundle exec rubocop
+bundle exec brakeman
+```
+
+## Sample Demo Scenarios
+
+### RAG only
+
+```text
+What are the must-visit attractions in Singapore?
+```
+
+### Weather only
+
+```text
+What is the weather forecast for Singapore next week?
+```
+
+### Currency only
+
+```text
+Convert INR 50,000 to SGD.
+```
+
+### RAG + Weather
+
+```text
+Create a three-day Singapore itinerary for next week and adjust it according to the weather forecast.
+```
+
+### RAG + Currency
+
+```text
+I have INR 60,000. Plan a three-day Singapore trip and show the equivalent SGD amount.
+```
+
+### Multi-turn conversation
+
+```text
+I'm travelling with my wife and 8-year-old son.
+```
+
+```text
+Plan three days for us in Singapore.
+```
+
+```text
+What if it rains on day two?
+```
+
+### Failure behavior
+
+```text
+What are the best neighbourhoods in Singapore?
+```
+
+If the knowledge base is insufficient, the assistant says so instead of inventing facts. If a tool fails, the assistant discloses the failure and continues with safe grounded content.
+
+## Response Provenance
+
+Assistant messages include visible provenance in the UI:
+
+- knowledge source titles and URLs
+- tool usage status
+
+That makes the workflow auditable and easy to test.
+
+## Assignment Compliance Snapshot
+
+| Assignment Requirement | Implementation | Test | Status |
+|---|---|---|---|
+| RAG-based destination retrieval | `Knowledge::Retriever` | `spec/services/knowledge/retriever_spec.rb` | Done |
+| Semantic/vector search | deterministic embeddings + cosine similarity | `spec/services/knowledge/retriever_spec.rb` | Done |
+| Weather MCP integration | `Mcp::WeatherClient` | `spec/services/mcp/weather_client_spec.rb` | Done |
+| Currency MCP integration | `Mcp::CurrencyClient` | `spec/services/mcp/currency_client_spec.rb` | Done |
+| RAG + MCP combined workflows | `Travel::Assistant` | `spec/services/travel/assistant_spec.rb` | Done |
+| Multi-turn conversational context | `Travel::ConversationContext` | `spec/services/travel/conversation_context_spec.rb` | Done |
+| Appropriate tool selection | `Travel::ToolRouter` | `spec/services/travel/tool_router_spec.rb` | Done |
+| Source/provenance information | message metadata + UI source list | `spec/services/travel/assistant_spec.rb` | Done |
+| Graceful failure handling | assistant rescue path + tool clients | `spec/services/travel/assistant_spec.rb` | Done |
+| Prompt engineering | `Travel::PromptBuilder` | covered by assistant workflow spec | Done |
+| Tests | RSpec suite | `bundle exec rspec` | Done |
+| README/documentation | this file | n/a | Done |
+| Simple usable UI | chat view and layout | manual UI smoke | Done |
+
+## Known Limitations
+
+- The app uses a portable Ruby cosine-similarity implementation instead of PostgreSQL `pgvector` so it runs reliably in this environment without extra database extension setup.
+- The LLM adapter is configurable and defaults to a local deterministic responder when no API key is provided.
+- Weather and currency clients are adapter-based and can be pointed at MCP-compatible endpoints through environment variables.

@@ -76,5 +76,32 @@ RSpec.describe Ai::LocalClient do
       expect(result).to start_with("Yes.")
       expect(result).not_to include("Day 1")
     end
+
+    it "separates knowledge, MCP data, and recommendations for combined itinerary and currency requests" do
+      client = described_class.new
+      message = Struct.new(:content).new("I have a budget of INR 60,000. Convert it to SGD and suggest a three-day itinerary.")
+
+      result = client.generate(
+        messages: [ message ],
+        system_prompt: "",
+        context: { trip_duration_days: 3, travel_party: "family", budget: 60_000, budget_currency: "INR", target_currency: "SGD" },
+        retrieved_documents: [
+          { title: "Visit Singapore - Travel Planning and Itineraries", summary: "Three-day sightseeing ideas", tags: [ "itinerary" ] }
+        ],
+        tool_results: [
+          {
+            name: "currency",
+            status: :success,
+            data: { amount: 60_000, from: "INR", to: "SGD", converted_amount: 960.0, rate: 0.016 }
+          }
+        ]
+      )
+
+      expect(result).to include("Knowledge-base facts:")
+      expect(result).to include("Current information from Currency MCP:")
+      expect(result).to include("LLM recommendations:")
+      expect(result).to include("Budget context: 60000 INR")
+      expect(result).to include("Trip overview: a 3-day Singapore plan for family.")
+    end
   end
 end

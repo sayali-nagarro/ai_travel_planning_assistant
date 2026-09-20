@@ -53,6 +53,22 @@ module Travel
           Knowledge::Importer.new.call
           retrieved_documents = retrieve_documents(user_message:, destination: context[:destination])
         end
+
+        if retrieved_documents.empty?
+          fallback_answer = "I could not retrieve enough destination knowledge to answer this safely."
+          assistant_message = conversation.messages.create!(role: :assistant, content: fallback_answer, metadata: { status: "error", error: "knowledge_base_empty" })
+
+          return Result.new(
+            answer: fallback_answer,
+            sources: [],
+            tools: [],
+            assistant_message: assistant_message,
+            conversation: conversation,
+            retrieved_documents: [],
+            context: context,
+            error: "knowledge_base_empty"
+          )
+        end
       end
 
       tool_results = []
