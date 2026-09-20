@@ -35,10 +35,15 @@ module Mcp
       uri = URI.parse("https://api.frankfurter.app/latest?amount=#{amount}&from=#{from}&to=#{to}")
       response = Net::HTTP.get_response(uri)
       payload = JSON.parse(response.body)
+      conversion = normalize_conversion(payload, amount:, from:, to:)
 
-      { status: :success, data: normalize_conversion(payload, amount:, from:, to:), transport: :frankfurter }
+      if conversion[:converted_amount].present?
+        { status: :success, data: conversion, transport: :frankfurter }
+      else
+        local_conversion(amount:, from:, to:, error: "Frankfurter response did not include a usable rate.")
+      end
     rescue StandardError => e
-      { status: :error, error: e.message }
+      local_conversion(amount:, from:, to:, error: e.message)
     end
 
     def normalize_conversion(payload, amount:, from:, to:)
@@ -51,6 +56,46 @@ module Mcp
         to: to,
         converted_amount: converted,
         rate: converted.to_f / amount.to_f
+      }
+    end
+
+    def local_conversion(amount:, from:, to:, error:)
+      rate = local_rate(from:, to:)
+      return { status: :error, error: error } unless rate
+
+      converted_amount = amount.to_f * rate
+
+      {
+        status: :success,
+        data: {
+          amount: amount,
+          from: from,
+          to: to,
+          converted_amount: converted_amount,
+          rate: rate
+        },
+        transport: :local_rate
+      }
+    end
+
+    def local_rate(from:, to:)
+      source_rate = local_rate_table[from.to_s.upcase]
+      target_rate = local_rate_table[to.to_s.upcase]
+      return 1.0 if from.to_s.upcase == to.to_s.upcase
+      return nil unless source_rate && target_rate
+
+      source_rate.to_f / target_rate.to_f
+    end
+
+    def local_rate_table
+      {
+        "INR" => 1.0,
+        "AUD" => 55.0,
+        "SGD" => 60.6060606061,
+        "USD" => 83.0,
+        "EUR" => 90.0,
+        "GBP" => 105.0,
+        "JPY" => 0.6
       }
     end
 

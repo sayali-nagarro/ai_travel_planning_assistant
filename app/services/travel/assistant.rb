@@ -57,7 +57,8 @@ module Travel
       end
 
       if decision.needs_currency && (budget = context[:budget]).present? && (from = context[:budget_currency]).present?
-        tool_results << build_tool_result(:currency, currency_client.convert(amount: budget, from: from, to: "SGD"))
+        to = context[:target_currency].presence || "SGD"
+        tool_results << build_tool_result(:currency, currency_client.convert(amount: budget, from: from, to: to))
       elsif decision.needs_currency
         tool_results << { name: "currency", status: :error, error: "No budget currency was provided." }
       end

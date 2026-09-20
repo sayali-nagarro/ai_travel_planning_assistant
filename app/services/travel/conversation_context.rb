@@ -12,6 +12,7 @@ module Travel
         children_ages: merged["children_ages"] || merged[:children_ages] || [],
         budget: merged["budget"] || merged[:budget],
         budget_currency: merged["budget_currency"] || merged[:budget_currency],
+        target_currency: merged["target_currency"] || merged[:target_currency],
         trip_duration_days: merged["trip_duration_days"] || merged[:trip_duration_days],
         travel_window: merged["travel_window"] || merged[:travel_window],
         interests: Array(merged["interests"] || merged[:interests]).compact,
@@ -42,6 +43,7 @@ module Travel
         children_ages: children_ages(text),
         budget: budget_amount(text),
         budget_currency: budget_currency(text),
+        target_currency: target_currency(text),
         trip_duration_days: trip_duration_days(text),
         travel_window: travel_window(text),
         interests: interests(text)
@@ -78,6 +80,11 @@ module Travel
 
     def budget_currency(text)
       match = text.match(/\b(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
+      match&.[](1)&.upcase
+    end
+
+    def target_currency(text)
+      match = text.match(/(?:\bto\b|\binto\b|\bin\b)\s+(INR|SGD|USD|EUR|GBP|AUD|JPY)\b/i)
       match&.[](1)&.upcase
     end
 

@@ -21,4 +21,26 @@ RSpec.describe Mcp::CurrencyClient do
     expect(result[:status]).to eq(:success)
     expect(result[:transport]).to eq(:frankfurter)
   end
+
+  it "uses a local INR to SGD fallback when the remote response is not JSON" do
+    client = described_class.new(transport: instance_double("Transport", call: { status: :error, error: "boom" }))
+    allow(Net::HTTP).to receive(:get_response).and_return(instance_double("Response", body: "<html>not json</html>"))
+
+    result = client.convert(amount: 60_000, from: "INR", to: "SGD")
+
+    expect(result[:status]).to eq(:success)
+    expect(result[:transport]).to eq(:local_rate)
+    expect(result[:data][:converted_amount]).to be_within(0.01).of(60_000 * 0.0165)
+  end
+
+  it "uses the local fallback for AUD to INR when the remote response is not usable" do
+    client = described_class.new(transport: instance_double("Transport", call: { status: :error, error: "boom" }))
+    allow(Net::HTTP).to receive(:get_response).and_return(instance_double("Response", body: "<html>not json</html>"))
+
+    result = client.convert(amount: 2, from: "AUD", to: "INR")
+
+    expect(result[:status]).to eq(:success)
+    expect(result[:transport]).to eq(:local_rate)
+    expect(result[:data][:converted_amount]).to be_within(0.01).of(110.0)
+  end
 end

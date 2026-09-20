@@ -44,4 +44,14 @@ RSpec.describe Travel::ConversationContext do
 
     expect(result[:trip_duration_days]).to eq(60)
   end
+
+  it "extracts a target currency for conversion requests" do
+    result = context.build(
+      conversation: conversation,
+      user_message: "Convert AUD 2 to INR."
+    )
+
+    expect(result[:budget_currency]).to eq("AUD")
+    expect(result[:target_currency]).to eq("INR")
+  end
 end

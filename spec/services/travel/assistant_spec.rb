@@ -72,4 +72,32 @@ RSpec.describe Travel::Assistant do
     expect(conversation.reload.messages.count).to eq(2)
     expect(conversation.messages.last.content).to include("could not complete")
   end
+
+  it "converts currency into the requested target currency" do
+    conversation = Conversation.create!
+    currency_client = instance_double(Mcp::CurrencyClient)
+    llm_client = instance_double(Ai::LocalClient)
+
+    expect(currency_client).to receive(:convert).with(amount: 2.0, from: "AUD", to: "INR").and_return(
+      status: :success,
+      data: { amount: 2.0, from: "AUD", to: "INR", converted_amount: 110.0, rate: 55.0 },
+      transport: :local_rate
+    )
+    allow(llm_client).to receive(:generate).and_return("2 AUD = 110 INR")
+
+    result = described_class.new(
+      conversation:,
+      user_message: "Convert AUD 2 to INR.",
+      llm_client:,
+      retriever: instance_double(Knowledge::Retriever, call: []),
+      weather_client: instance_double(Mcp::WeatherClient, forecast: { status: :error, error: "not used" }),
+      currency_client:,
+      tool_router: Travel::ToolRouter.new,
+      context_builder: Travel::ConversationContext.new,
+      prompt_builder: Travel::PromptBuilder.new
+    ).call
+
+    expect(result.tools.first[:name]).to eq("currency")
+    expect(result.tools.first[:data][:to]).to eq("INR")
+  end
 end
