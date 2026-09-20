@@ -411,3 +411,10 @@ Travel::Assistant.call(
 
 <img width="1017" height="905" alt="image" src="https://github.com/user-attachments/assets/15f622b8-9b22-45f4-9b0f-93bd69c4f3ed" />
 
+
+<img width="896" height="779" alt="image" src="https://github.com/user-attachments/assets/88f450c6-b2cb-4ef7-a3fb-acc21d2316c0" />
+
+
+<img width="877" height="512" alt="image" src="https://github.com/user-attachments/assets/7bb2908c-8ac3-43f5-8ecc-d6f648cf734b" />
+
+
