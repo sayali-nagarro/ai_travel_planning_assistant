@@ -1,3 +1,5 @@
+https://github.com/sayali-nagarro/ai_travel_planning_assistant
+
 # AI Travel Planning Assistant
 
 Production-oriented Ruby on Rails app for Singapore travel planning with RAG, semantic retrieval, current weather and currency tooling, multi-turn memory, and source-aware responses.
